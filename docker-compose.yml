@@ -1,0 +1,119 @@
+# ============================================================
+# DOCKER COMPOSE - UNDERWRITE PRO FULL STACK
+# Backend + PostgreSQL + Optional Services
+# ============================================================
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: underwrite-pro-db
+    environment:
+      POSTGRES_DB: underwrite_pro
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: <POSTGRES_PASSWORD>
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - underwrite-pro-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile
+    container_name: underwrite-pro-backend
+    environment:
+      # Database
+      DATABASE_URL: postgresql://postgres:<POSTGRES_PASSWORD>@postgres:5432/underwrite_pro
+      
+      # JWT
+      JWT_SECRET: <JWT_SECRET>
+      
+      # Application
+      APP_URL: http://localhost:3000
+      PORT: 3000
+      NODE_ENV: production
+      
+      # Stripe
+      STRIPE_SECRET_KEY: <STRIPE_SECRET_KEY>
+      STRIPE_PUBLISHABLE_KEY: <STRIPE_PUBLISHABLE_KEY>
+      STRIPE_WEBHOOK_SECRET: <STRIPE_WEBHOOK_SECRET>
+      
+      # DocuSign
+      DOCUSIGN_INTEGRATOR_KEY: <DOCUSIGN_INTEGRATOR_KEY>
+      DOCUSIGN_ACCOUNT_ID: <DOCUSIGN_ACCOUNT_ID>
+      DOCUSIGN_BASE_URL: https://demo.docusign.net/restapi
+      DOCUSIGN_WEBHOOK_SECRET: <DOCUSIGN_WEBHOOK_SECRET>
+      
+      # GoHighLevel
+      GHL_API_KEY: <GHL_API_KEY>
+      GHL_LOCATION_ID: <GHL_LOCATION_ID>
+      GHL_WEBHOOK_SECRET: <GHL_WEBHOOK_SECRET>
+      
+      # Make.com
+      MAKE_WEBHOOK_URL: <MAKE_WEBHOOK_URL>
+      
+      # Compliance Vendors
+      ALLOY_API_KEY: <ALLOY_API_KEY>
+      MIDDESK_API_KEY: <MIDDESK_API_KEY>
+      PERSONA_API_KEY: <PERSONA_API_KEY>
+      ONFIDO_API_KEY: <ONFIDO_API_KEY>
+      
+      # SOC2 Tools
+      DRATA_API_KEY: <DRATA_API_KEY>
+      VANTA_API_KEY: <VANTA_API_KEY>
+      
+      # Security
+      IP_ALLOWLIST_ENABLED: false
+      IP_ALLOWLIST: ""
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - underwrite-pro-network
+    restart: unless-stopped
+
+  # Optional: Supabase-compatible PostgREST (for direct DB access)
+  # Uncomment if you want to use Supabase-style REST API
+  # postgrest:
+  #   image: postgrest/postgrest:latest
+  #   container_name: underwrite-pro-postgrest
+  #   environment:
+  #     PGRST_DB_URI: postgresql://postgres:<POSTGRES_PASSWORD>@postgres:5432/underwrite_pro
+  #     PGRST_DB_SCHEMA: public
+  #     PGRST_DB_ANON_ROLE: postgres
+  #     PGRST_JWT_SECRET: <JWT_SECRET>
+  #   ports:
+  #     - "3001:3000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - underwrite-pro-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  underwrite-pro-network:
+    driver: bridge

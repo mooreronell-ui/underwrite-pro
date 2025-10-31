@@ -1,0 +1,183 @@
+{
+  "docusign_envelope_completed": {
+    "description": "DocuSign envelope completed event",
+    "endpoint": "POST /webhooks/docusign",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-DocuSign-Signature": "mock-signature"
+    },
+    "payload": {
+      "event": "envelope-completed",
+      "envelopeId": "abc-123-def-456",
+      "org_id": "11111111-1111-1111-1111-111111111111",
+      "status": "completed",
+      "completedDateTime": "2025-10-31T12:00:00Z",
+      "recipients": [
+        {
+          "email": "borrower@example.com",
+          "name": "John Doe",
+          "status": "completed",
+          "signedDateTime": "2025-10-31T12:00:00Z"
+        }
+      ]
+    }
+  },
+  "docusign_envelope_sent": {
+    "description": "DocuSign envelope sent event",
+    "endpoint": "POST /webhooks/docusign",
+    "payload": {
+      "event": "envelope-sent",
+      "envelopeId": "abc-123-def-456",
+      "org_id": "11111111-1111-1111-1111-111111111111",
+      "status": "sent",
+      "sentDateTime": "2025-10-31T10:00:00Z"
+    }
+  },
+  "docusign_envelope_declined": {
+    "description": "DocuSign envelope declined event",
+    "endpoint": "POST /webhooks/docusign",
+    "payload": {
+      "event": "envelope-declined",
+      "envelopeId": "abc-123-def-456",
+      "org_id": "11111111-1111-1111-1111-111111111111",
+      "status": "declined",
+      "declinedDateTime": "2025-10-31T11:00:00Z",
+      "declinedReason": "Terms not acceptable"
+    }
+  },
+  "ghl_contact_created": {
+    "description": "GoHighLevel contact created event",
+    "endpoint": "POST /webhooks/ghl",
+    "headers": {
+      "Content-Type": "application/json",
+      "X-GHL-Signature": "mock-signature"
+    },
+    "payload": {
+      "type": "contact.created",
+      "id": "contact-789-xyz",
+      "org_id": "11111111-1111-1111-1111-111111111111",
+      "locationId": "11111111-1111-1111-1111-111111111111",
+      "contact": {
+        "id": "contact-789-xyz",
+        "email": "newlead@example.com",
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "phone": "+1234567890",
+        "tags": ["commercial-loan", "multifamily"],
+        "customFields": {
+          "loan_amount": "5000000",
+          "property_type": "multifamily"
+        }
+      },
+      "createdAt": "2025-10-31T09:00:00Z"
+    }
+  },
+  "ghl_opportunity_created": {
+    "description": "GoHighLevel opportunity created event",
+    "endpoint": "POST /webhooks/ghl",
+    "payload": {
+      "type": "opportunity.created",
+      "id": "opp-456-abc",
+      "org_id": "11111111-1111-1111-1111-111111111111",
+      "locationId": "11111111-1111-1111-1111-111111111111",
+      "opportunity": {
+        "id": "opp-456-abc",
+        "name": "Downtown Office Building",
+        "contactId": "contact-789-xyz",
+        "pipelineId": "pipeline-123",
+        "pipelineStageId": "stage-intake",
+        "monetaryValue": 5000000,
+        "status": "open"
+      },
+      "createdAt": "2025-10-31T09:30:00Z"
+    }
+  },
+  "stripe_invoice_payment_succeeded": {
+    "description": "Stripe invoice payment succeeded event",
+    "endpoint": "POST /webhooks/stripe",
+    "headers": {
+      "Content-Type": "application/json",
+      "Stripe-Signature": "mock-signature"
+    },
+    "payload": {
+      "id": "evt_1234567890",
+      "type": "invoice.payment_succeeded",
+      "data": {
+        "object": {
+          "id": "in_1234567890",
+          "object": "invoice",
+          "amount_paid": 29900,
+          "currency": "usd",
+          "customer": "cus_1234567890",
+          "subscription": "sub_1234567890",
+          "payment_intent": "pi_1234567890",
+          "status": "paid",
+          "metadata": {
+            "org_id": "11111111-1111-1111-1111-111111111111"
+          }
+        }
+      },
+      "created": 1698768000
+    }
+  },
+  "stripe_subscription_updated": {
+    "description": "Stripe subscription updated event",
+    "endpoint": "POST /webhooks/stripe",
+    "payload": {
+      "id": "evt_0987654321",
+      "type": "customer.subscription.updated",
+      "data": {
+        "object": {
+          "id": "sub_1234567890",
+          "object": "subscription",
+          "customer": "cus_1234567890",
+          "status": "active",
+          "current_period_start": 1698768000,
+          "current_period_end": 1701360000,
+          "metadata": {
+            "org_id": "11111111-1111-1111-1111-111111111111",
+            "plan": "professional"
+          }
+        }
+      },
+      "created": 1698768000
+    }
+  },
+  "stripe_subscription_deleted": {
+    "description": "Stripe subscription canceled event",
+    "endpoint": "POST /webhooks/stripe",
+    "payload": {
+      "id": "evt_1122334455",
+      "type": "customer.subscription.deleted",
+      "data": {
+        "object": {
+          "id": "sub_1234567890",
+          "object": "subscription",
+          "customer": "cus_1234567890",
+          "status": "canceled",
+          "canceled_at": 1698768000,
+          "metadata": {
+            "org_id": "11111111-1111-1111-1111-111111111111"
+          }
+        }
+      },
+      "created": 1698768000
+    }
+  },
+  "make_custom_automation": {
+    "description": "Make.com custom automation trigger",
+    "endpoint": "POST /webhooks/make",
+    "payload": {
+      "org_id": "11111111-1111-1111-1111-111111111111",
+      "event": "deal_approved",
+      "data": {
+        "deal_id": "88888888-8888-8888-8888-888888888888",
+        "deal_name": "Riverside Apartments",
+        "loan_amount": 3750000,
+        "borrower_email": "borrower@example.com",
+        "approved_at": "2025-10-31T14:00:00Z"
+      },
+      "timestamp": "2025-10-31T14:00:00Z"
+    }
+  }
+}

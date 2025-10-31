@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_API_URL": "<BACKEND_API_URL>",
+    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": "<STRIPE_PUBLISHABLE_KEY>"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "<BACKEND_API_URL>",
+      "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": "<STRIPE_PUBLISHABLE_KEY>"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "<BACKEND_API_URL>/api/:path*"
+    }
+  ]
+}
