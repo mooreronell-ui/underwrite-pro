@@ -467,9 +467,5 @@ function validateGHLSignature(payload, signature, secret) {
   return true; // Placeholder
 }
 
-module.exports = {
-  handleDocuSignWebhook,
-  handleGHLWebhook,
-  handleStripeWebhook,
-  handleMakeWebhook
-};
+// All handlers are already exported via exports.* above
+// No additional module.exports needed
