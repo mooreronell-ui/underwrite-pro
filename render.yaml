@@ -1,13 +1,12 @@
 services:
-  # Backend API Service
+  # Backend API Service (Docker)
   - type: web
     name: underwrite-pro-api
-    runtime: node
+    runtime: docker
     region: oregon
     plan: free
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm run start
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./backend
     envVars:
       - key: NODE_ENV
         value: production
