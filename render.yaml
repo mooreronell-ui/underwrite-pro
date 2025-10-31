@@ -4,14 +4,15 @@ services:
     name: underwrite-pro-api
     runtime: node
     region: oregon
-    plan: starter
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && node index.js
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm run start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3000
+        value: 10000
       - key: DATABASE_URL
         fromDatabase:
           name: underwrite-pro-db
@@ -30,16 +31,17 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
-    healthCheckPath: /api/health
+    healthCheckPath: /health
 
   # Frontend UI Service
   - type: web
     name: underwrite-pro-ui
     runtime: node
     region: oregon
-    plan: starter
-    buildCommand: cd frontend && npm install && npm run build
-    startCommand: cd frontend && npm start
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
@@ -61,4 +63,4 @@ databases:
     databaseName: underwrite_pro
     user: underwrite_pro_user
     region: oregon
-    plan: starter
+    plan: free
