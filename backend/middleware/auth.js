@@ -1,16 +1,27 @@
 // ============================================================
 // AUTHENTICATION MIDDLEWARE
-// JWT token validation with Supabase
+// JWT token validation with Supabase (optional)
 // ============================================================
 
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+/**
+ * Lazy-load Supabase client
+ * Returns null if Supabase is not configured
+ */
+function getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+  
+  if (!url || !key) {
+    // Supabase not configured - return null
+    console.warn('[AUTH] Supabase not configured. Auth middleware will allow all requests.');
+    return null;
+  }
+  
+  return createClient(url, key);
+}
 
 /**
  * Middleware to validate JWT token and extract user context
@@ -18,6 +29,27 @@ const supabase = createClient(
  */
 const authMiddleware = async (req, res, next) => {
   try {
+    const supabase = getSupabase();
+    
+    // If Supabase is not configured, allow request through
+    if (!supabase) {
+      // Set a default user context for development/testing
+      req.user = {
+        id: 'dev-user',
+        org_id: 'dev-org',
+        email: 'dev@example.com',
+        first_name: 'Dev',
+        last_name: 'User',
+        role: 'admin'
+      };
+      req.jwtClaims = {
+        sub: 'dev-user',
+        org_id: 'dev-org',
+        role: 'admin'
+      };
+      return next();
+    }
+    
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
     
