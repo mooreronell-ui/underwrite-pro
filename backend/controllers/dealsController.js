@@ -181,9 +181,10 @@ exports.listDeals = async (req, res, next) => {
     const offset = (page - 1) * limit;
 
     // Build WHERE clause dynamically
-    let whereConditions = ['d.org_id = $1'];
-    let queryParams = [req.user.org_id];
-    let paramIndex = 2;
+    // Note: org_id filtering disabled until org setup is complete
+    let whereConditions = [];
+    let queryParams = [];
+    let paramIndex = 1;
 
     if (status) {
       whereConditions.push(`d.status = $${paramIndex}`);
@@ -203,11 +204,11 @@ exports.listDeals = async (req, res, next) => {
       paramIndex++;
     }
 
-    const whereClause = whereConditions.join(' AND ');
+    const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
 
     // Get total count
     const countResult = await query(
-      `SELECT COUNT(*) FROM deals d WHERE ${whereClause}`,
+      `SELECT COUNT(*) FROM deals d ${whereClause}`,
       queryParams
     );
     const totalCount = parseInt(countResult.rows[0].count);
@@ -223,7 +224,7 @@ exports.listDeals = async (req, res, next) => {
       LEFT JOIN borrowers b ON d.borrower_id = b.id
       LEFT JOIN users u_broker ON d.broker_id = u_broker.id
       LEFT JOIN users u_assigned ON d.assigned_to = u_assigned.id
-      WHERE ${whereClause}
+      ${whereClause}
       ORDER BY d.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `, [...queryParams, limit, offset]);
