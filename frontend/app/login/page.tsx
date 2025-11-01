@@ -38,9 +38,12 @@ export default function LoginPage() {
       }
 
       console.log('✓ Login successful:', data.user?.email);
+      console.log('✓ Token stored, redirecting to dashboard...');
       
       // Redirect to dashboard
-      router.push('/dashboard');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 100);
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'An unexpected error occurred');
