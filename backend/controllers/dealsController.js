@@ -167,80 +167,64 @@ exports.getDealById = async (req, res, next) => {
 /**
  * GET /api/deals
  * List all deals with pagination and filters
+ * Uses Supabase client and supports optional org filtering
  */
 exports.listDeals = async (req, res, next) => {
   try {
-    const {
-      page = 1,
-      limit = 20,
-      status,
-      asset_type,
-      assigned_to
-    } = req.query;
-
-    const offset = (page - 1) * limit;
-
-    // Build WHERE clause dynamically
-    // Note: org_id filtering disabled until org setup is complete
-    let whereConditions = [];
-    let queryParams = [];
-    let paramIndex = 1;
-
-    if (status) {
-      whereConditions.push(`d.status = $${paramIndex}`);
-      queryParams.push(status);
-      paramIndex++;
+    const { supabase } = require('../lib/supabaseClient');
+    
+    if (!supabase) {
+      return res.status(500).json({ error: 'SUPABASE_NOT_CONFIGURED' });
     }
 
-    if (asset_type) {
-      whereConditions.push(`d.asset_type = $${paramIndex}`);
-      queryParams.push(asset_type);
-      paramIndex++;
+    // user comes from supabaseAuth middleware
+    const user = req.user;
+
+    // try to get active org (if present)
+    let activeOrgId = null;
+    const { data: activeOrg, error: activeErr } = await supabase
+      .from('user_active_org')
+      .select('org_id')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+
+    if (!activeErr && activeOrg?.org_id) {
+      activeOrgId = activeOrg.org_id;
     }
 
-    if (assigned_to) {
-      whereConditions.push(`d.assigned_to = $${paramIndex}`);
-      queryParams.push(assigned_to);
-      paramIndex++;
+    // Build query
+    let dealsQuery = supabase
+      .from('deals')
+      .select('id, name, loan_amount, asset_type, status, created_at, org_id, financials')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    // Apply org filter if user has an active org
+    if (activeOrgId) {
+      dealsQuery = dealsQuery.eq('org_id', activeOrgId);
     }
 
-    const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
+    const { data, error } = await dealsQuery;
 
-    // Get total count
-    const countResult = await query(
-      `SELECT COUNT(*) FROM deals d ${whereClause}`,
-      queryParams
-    );
-    const totalCount = parseInt(countResult.rows[0].count);
+    if (error) {
+      console.error('[DEALS] Fetch error:', error);
+      return res.status(500).json({ 
+        error: 'DEALS_FETCH_FAILED', 
+        details: error.message 
+      });
+    }
 
-    // Get paginated results
-    const result = await query(`
-      SELECT 
-        d.*,
-        b.entity_name as borrower_name,
-        u_broker.email as broker_email,
-        u_assigned.email as assigned_to_email
-      FROM deals d
-      LEFT JOIN borrowers b ON d.borrower_id = b.id
-      LEFT JOIN users u_broker ON d.broker_id = u_broker.id
-      LEFT JOIN users u_assigned ON d.assigned_to = u_assigned.id
-      ${whereClause}
-      ORDER BY d.created_at DESC
-      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-    `, [...queryParams, limit, offset]);
-
-    res.json({
-      success: true,
-      data: result.rows,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: totalCount,
-        totalPages: Math.ceil(totalCount / limit)
-      }
+    return res.json({ 
+      ok: true, 
+      org_id: activeOrgId, 
+      deals: data || [] 
     });
-  } catch (error) {
-    next(error);
+  } catch (e) {
+    console.error('[DEALS] Unexpected error:', e);
+    return res.status(500).json({ 
+      error: 'UNEXPECTED', 
+      message: e.message 
+    });
   }
 };
 
