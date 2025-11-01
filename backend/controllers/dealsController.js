@@ -195,7 +195,7 @@ exports.listDeals = async (req, res, next) => {
     // Build query
     let dealsQuery = supabase
       .from('deals')
-      .select('id, name, loan_amount, asset_type, status, created_at, org_id, financials')
+      .select('id, deal_name, loan_amount, asset_type, status, created_at, org_id, financials')
       .order('created_at', { ascending: false })
       .limit(50);
 
