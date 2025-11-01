@@ -1,9 +1,10 @@
 // ============================================================
 // PUBLIC DEALS CONTROLLER (NO AUTH)
 // For testing database connectivity without JWT
+// Uses Supabase HTTP client instead of direct Postgres
 // ============================================================
 
-const { query } = require('../config/database');
+const { supabase } = require('../lib/supabaseClient');
 
 /**
  * GET /api/deals/public
@@ -11,38 +12,67 @@ const { query } = require('../config/database');
  */
 exports.listPublicDeals = async (req, res) => {
   try {
-    // Query the database directly without RLS
-    const result = await query(`
-      SELECT 
-        d.id,
-        d.deal_name,
-        d.loan_amount,
-        d.asset_type,
-        d.status,
-        d.created_at,
-        d.org_id,
-        o.name as org_name,
-        pf.purchase_price,
-        pf.gross_rental_income,
-        pf.net_operating_income,
-        pf.dscr,
-        pf.ltv
-      FROM deals d
-      LEFT JOIN organizations o ON d.org_id = o.id
-      LEFT JOIN property_financials pf ON d.id = pf.deal_id
-      ORDER BY d.created_at DESC
-      LIMIT 25
-    `);
+    if (!supabase) {
+      return res.status(500).json({
+        error: 'SUPABASE_NOT_CONFIGURED',
+        message: 'Supabase client is not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.'
+      });
+    }
+
+    // First query: get deals
+    const { data: deals, error } = await supabase
+      .from('deals')
+      .select('id, deal_name, loan_amount, asset_type, status, created_at, org_id')
+      .order('created_at', { ascending: false })
+      .limit(25);
+
+    if (error) {
+      console.error('[PUBLIC_DEALS] Supabase deals error:', error);
+      return res.status(500).json({
+        error: 'SUPABASE_DEALS_ERROR',
+        details: error.message
+      });
+    }
+
+    // Optional: get financials for those deals
+    const dealIds = (deals || []).map(d => d.id);
+    let financialsByDeal = {};
+    
+    if (dealIds.length > 0) {
+      const { data: financials, error: finError } = await supabase
+        .from('property_financials')
+        .select('deal_id, dscr, net_operating_income, ltv, purchase_price')
+        .in('deal_id', dealIds);
+
+      if (!finError && financials) {
+        financialsByDeal = financials.reduce((acc, row) => {
+          acc[row.deal_id] = row;
+          return acc;
+        }, {});
+      }
+    }
+
+    // Format the response
+    const result = (deals || []).map(d => ({
+      id: d.id,
+      name: d.deal_name,
+      loan_amount: d.loan_amount,
+      asset_type: d.asset_type,
+      status: d.status,
+      created_at: d.created_at,
+      org_id: d.org_id,
+      financials: financialsByDeal[d.id] || null
+    }));
 
     return res.json({
       ok: true,
-      count: result.rows.length,
-      deals: result.rows
+      count: result.length,
+      deals: result
     });
   } catch (error) {
-    console.error('[PUBLIC_DEALS] Database error:', error);
+    console.error('[PUBLIC_DEALS] Unexpected error:', error);
     return res.status(500).json({
-      error: 'DB_ERROR',
+      error: 'UNEXPECTED_ERROR',
       details: error.message
     });
   }
