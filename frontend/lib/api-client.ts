@@ -10,11 +10,12 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add Supabase JWT token
 apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth_token');
+      // Get Supabase access token
+      const token = localStorage.getItem('up_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -31,9 +32,9 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // Unauthorized - redirect to login
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+      // Unauthorized - clear Supabase session and redirect to login
+      localStorage.removeItem('up_token');
+      localStorage.removeItem('up_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);

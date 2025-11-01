@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,11 +17,33 @@ export default function LoginPage() {
     try {
       setLoading(true);
       setError(null);
-      await login(email, password);
-      // Redirect handled by auth context
+
+      // Sign in with Supabase
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Store access token for API calls
+      const accessToken = data.session?.access_token;
+      if (accessToken && typeof window !== 'undefined') {
+        localStorage.setItem('up_token', accessToken);
+        localStorage.setItem('up_user', JSON.stringify(data.user));
+      }
+
+      console.log('✓ Login successful:', data.user?.email);
+      
+      // Redirect to dashboard
+      router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Login failed');
-    } finally {
+      console.error('Login error:', err);
+      setError(err.message || 'An unexpected error occurred');
       setLoading(false);
     }
   };
@@ -52,6 +73,7 @@ export default function LoginPage() {
                 required
                 className="input"
                 placeholder="you@company.com"
+                autoComplete="email"
               />
             </div>
 
@@ -64,6 +86,7 @@ export default function LoginPage() {
                 required
                 className="input"
                 placeholder="••••••••"
+                autoComplete="current-password"
               />
             </div>
 
@@ -78,7 +101,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Demo credentials: any email with any password
+              Use your Supabase Auth credentials
             </p>
           </div>
         </div>
