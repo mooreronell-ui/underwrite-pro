@@ -73,6 +73,14 @@ app.get('/health', (req, res) => {
 });
 
 // ============================================================
+// PUBLIC API ROUTES (NO AUTH)
+// ============================================================
+
+// Public deals endpoint for testing (must be before auth middleware)
+const publicDealsController = require('./controllers/publicDealsController');
+app.get('/api/deals/public', publicDealsController.listPublicDeals);
+
+// ============================================================
 // API ROUTES (with authentication & org context)
 // ============================================================
 
