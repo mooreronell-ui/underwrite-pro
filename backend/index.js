@@ -84,8 +84,9 @@ app.get('/api/deals/public', publicDealsController.listPublicDeals);
 // API ROUTES (with authentication & org context)
 // ============================================================
 
-// Apply authentication middleware to all /api routes
-app.use('/api', authMiddleware);
+// Apply context and audit middleware to all /api routes
+// Note: Authentication is now handled at route level with Supabase JWT
+// app.use('/api', authMiddleware); // DISABLED - using Supabase auth instead
 app.use('/api', orgContextMiddleware);
 app.use('/api', auditLogMiddleware);
 
