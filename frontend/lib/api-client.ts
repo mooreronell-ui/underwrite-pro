@@ -1,6 +1,13 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Prefer the established BASE_URL, but accept API_URL as a fallback for robustness.
+const API_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL;
+
+if (!API_URL) {
+  console.error("API base URL is missing. Set NEXT_PUBLIC_API_BASE_URL or NEXT_PUBLIC_API_URL.");
+}
 
 // Create axios instance
 const apiClient = axios.create({
