@@ -5,6 +5,7 @@
 // Attaches authenticated user to req.user
 
 const { createClient } = require('@supabase/supabase-js');
+const { audit } = require('../lib/audit');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -51,6 +52,33 @@ module.exports = async function supabaseAuth(req, res, next) {
     
     console.log(`✓ Authenticated user: ${data.user.email} (${data.user.id})`);
     
+    // Non-blocking auto-attach to a personal org on first auth
+    try {
+      const auth_user_id = data.user.id;
+      const { supabase: supabaseClient } = require('../lib/supabaseClient');
+      const { count, error: checkErr } = await supabaseClient
+        .from('user_org_memberships')
+        .select('id', { count: 'exact' })
+        .eq('auth_user_id', auth_user_id)
+        .limit(1);
+      if (checkErr) throw checkErr;
+      if (!count) {
+        const orgName = `${data.user.email?.split('@')[0] || 'My'} Organization`;
+        const { data: orgRow, error: orgErr } = await supabaseClient
+          .from('organizations')
+          .insert({ name: orgName })
+          .select('id')
+          .single();
+        if (orgErr) throw orgErr;
+        const org_id = orgRow.id;
+        await supabaseClient.from('user_org_memberships').insert({ org_id, auth_user_id, role: 'owner' });
+        await supabaseClient.from('user_active_org').upsert({ auth_user_id, org_id }, { onConflict: 'auth_user_id' });
+        audit?.('org.auto-create', { org_id, user_id: auth_user_id, name: orgName });
+        console.log(`[Org Attach] Created + activated org for ${auth_user_id}`);
+      }
+    } catch (e) {
+      console.warn('[Org Attach] non-blocking failure:', e?.message);
+    }
     next();
   } catch (e) {
     console.error('supabaseAuth error:', e.message);

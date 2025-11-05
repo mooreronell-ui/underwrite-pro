@@ -136,17 +136,19 @@ app.get('/api/deals/public', publicDealsController.listPublicDeals);
 // API ROUTES (with authentication & org context)
 // ============================================================
 
-// Apply context and audit middleware to all /api routes
-// Note: Authentication is now handled at route level with Supabase JWT
-// app.use('/api', authMiddleware); // DISABLED - using Supabase auth instead
-// app.use('/api', orgContextMiddleware); // DISABLED - needs org setup
-// app.use('/api', auditLogMiddleware); // DISABLED - depends on org context
+// Org routes (includes auth middleware internally)
+app.use('/api/orgs', orgsRoutes);
+
+// Protected routes (apply auth + org context)
+const supabaseAuth = require('./middleware/supabaseAuth');
+const orgContext = require('./middleware/orgContext');
+app.use(supabaseAuth);
+app.use(orgContext);
 
 // Mount route handlers
 app.use('/api/deals', dealsRoutes);
 app.use('/api/underwriting', underwritingRoutes);
 app.use('/api/term-sheets', termSheetsRoutes);
-app.use('/api/orgs', orgsRoutes);
 
 // Webhooks (no auth required, signature validation inside handlers)
 app.use('/webhooks', webhooksRoutes);

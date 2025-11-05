@@ -12,37 +12,32 @@ const supabaseAuth = require('../middleware/supabaseAuth');
 const { requireRole } = require('../middleware/auth');
 const dealsController = require('../controllers/dealsController');
 
-// Create new deal (brokers, underwriters, admins) - PROTECTED
-router.post('/', 
-  supabaseAuth,
-  requireRole(['broker', 'underwriter', 'admin']),
-  dealsController.createDeal
-);
+// List all deals (filtered by active org)
+router.get('/', async (req, res) => {
+  const { supabase } = require('../lib/supabaseClient');
+  const orgId = req.orgId;
+  if (!orgId) return res.json({ ok: true, deals: [], note: "No active org; join or create one." });
+  const { data, error } = await supabase
+    .from('deals')
+    .select('*')
+    .eq('org_id', orgId);
+  if (error) {
+    console.error('deals list error:', error);
+    return res.status(500).json({ ok: false, error: 'Failed to retrieve deals.' });
+  }
+  return res.json({ ok: true, deals: data || [] });
+});
 
-// Get single deal by ID - PROTECTED
-router.get('/:id', 
-  supabaseAuth,
-  dealsController.getDealById
-);
+// Get single deal by ID
+router.get('/:id', dealsController.getDealById);
 
-// List all deals (with pagination and filters) - PROTECTED
-router.get('/', 
-  supabaseAuth,
-  dealsController.listDeals
-);
+// Create new deal
+router.post('/', dealsController.createDeal);
 
-// Update deal - PROTECTED
-router.put('/:id',
-  supabaseAuth,
-  requireRole(['broker', 'underwriter', 'admin']),
-  dealsController.updateDeal
-);
+// Update deal
+router.put('/:id', dealsController.updateDeal);
 
-// Delete deal (admin only) - PROTECTED
-router.delete('/:id',
-  supabaseAuth,
-  requireRole(['admin']),
-  dealsController.deleteDeal
-);
+// Delete deal
+router.delete('/:id', dealsController.deleteDeal);
 
 module.exports = router;

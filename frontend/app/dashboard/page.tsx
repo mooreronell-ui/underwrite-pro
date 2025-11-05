@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [recentDeals, setRecentDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -44,8 +45,10 @@ export default function DashboardPage() {
 
       // Fetch recent deals
       const dealsResponse = await api.getDeals({ page: 1, limit: 5 });
-      const deals = dealsResponse.data.data || [];
+      const deals = dealsResponse.data.data || dealsResponse.data.deals || [];
+      const responseNote = dealsResponse.data.note || null;
       setRecentDeals(deals);
+      setNote(responseNote);
 
       // Calculate stats from deals
       setStats({
@@ -85,6 +88,26 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (note && recentDeals.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="p-4 bg-yellow-50 border border-yellow-300 rounded">
+            <p className="font-semibold">{note}</p>
+            {note.includes('No active org') && (
+              <p className="mt-2 text-sm">Use the Active Org switcher in the header to create or select an organization.</p>
+            )}
+          </div>
+        </main>
       </div>
     );
   }
