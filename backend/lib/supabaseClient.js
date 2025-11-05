@@ -19,13 +19,18 @@ console.log('[SUPABASE] Environment Check:', {
   'Key Value': SB_KEY ? `${SB_KEY.substring(0, 20)}...` : 'MISSING'
 });
 
+let supabase = null;
+
 if (!isUrlPresent || !isKeyPresent) {
-  console.error('[SUPABASE] FATAL: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  throw new Error('Supabase client initialization failed - missing required environment variables');
+  console.error('[SUPABASE] WARNING: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  console.error('[SUPABASE] Supabase features will not be available');
+} else {
+  try {
+    supabase = createClient(SB_URL, SB_KEY);
+    console.log('[SUPABASE] Client initialized successfully');
+  } catch (err) {
+    console.error('[SUPABASE] Failed to initialize client:', err.message);
+  }
 }
-
-const supabase = createClient(SB_URL, SB_KEY);
-
-console.log('[SUPABASE] Client initialized successfully');
 
 module.exports = { supabase };
