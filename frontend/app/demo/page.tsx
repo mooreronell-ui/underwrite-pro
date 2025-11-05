@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "https://underwrite-pro-api.onrender.com";
+const FEATURE_DEMO = process.env.NEXT_PUBLIC_FEATURE_DEMO || "true";
 
 type Deal = {
   id: string;
@@ -14,10 +16,18 @@ type Deal = {
 };
 
 export default function DemoDashboardPage() {
+  const router = useRouter();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState("unknown");
+
+  // Check feature flag
+  useEffect(() => {
+    if (FEATURE_DEMO === "false") {
+      router.push("/404");
+    }
+  }, [router]);
 
   useEffect(() => {
     async function load() {

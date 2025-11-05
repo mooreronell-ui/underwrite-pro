@@ -1,0 +1,24 @@
+# CODEOWNERS for Underwrite Pro
+# These owners will be requested for review when someone opens a pull request.
+
+# Default owner for everything in the repo
+* @mooreronell-ui
+
+# Backend code requires review
+/backend/ @mooreronell-ui
+/backend/**/* @mooreronell-ui
+
+# Frontend code requires review
+/frontend/ @mooreronell-ui
+/frontend/**/* @mooreronell-ui
+
+# Infrastructure and ops require review
+/ops/ @mooreronell-ui
+/.github/ @mooreronell-ui
+/CODEOWNERS @mooreronell-ui
+
+# Database migrations require review
+/ops/sql/ @mooreronell-ui
+
+# CI/CD configuration requires review
+/.github/workflows/ @mooreronell-ui

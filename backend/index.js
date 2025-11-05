@@ -10,6 +10,35 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
+// ============================================================
+// MONITORING - SENTRY (OPTIONAL)
+// ============================================================
+
+// Initialize Sentry if DSN is configured (not placeholder)
+if (process.env.SENTRY_DSN_BACKEND && !process.env.SENTRY_DSN_BACKEND.startsWith('TBD')) {
+  try {
+    const Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN_BACKEND,
+      environment: process.env.NODE_ENV || 'production',
+      tracesSampleRate: 0.2, // 20% of transactions
+      beforeSend(event) {
+        // Filter out sensitive data
+        if (event.request) {
+          delete event.request.cookies;
+          delete event.request.headers?.authorization;
+        }
+        return event;
+      }
+    });
+    console.log('[SENTRY] Initialized for error tracking');
+  } catch (err) {
+    console.warn('[SENTRY] Failed to initialize:', err.message);
+  }
+} else {
+  console.log('[SENTRY] Skipped (DSN not configured or is placeholder)');
+}
+
 // Middleware imports
 const { authMiddleware } = require('./middleware/auth');
 const { orgContextMiddleware } = require('./middleware/orgContext');
@@ -68,7 +97,8 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     service: 'underwrite-pro-api',
-    version: '1.0.0'
+    version: 'v1.0.0-prod-lock',
+    environment: process.env.NODE_ENV || 'production'
   });
 });
 
