@@ -3,7 +3,10 @@
 // Node.js + Express + PostgreSQL
 // ============================================================
 
-require('dotenv').config();
+// Load dotenv only in non-production (Render injects env vars directly)
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -63,11 +66,30 @@ const PORT = process.env.PORT || 3000;
 // Helmet for security headers
 app.use(helmet());
 
-// CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
-  credentials: true
-}));
+// CORS configuration with dynamic origin validation
+const productionOrigin = process.env.FRONTEND_URL;
+const allowedOrigins = [productionOrigin];
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
+}
+
+console.log(`[CORS] Allowed origins: ${allowedOrigins.filter(Boolean).join(', ')}`);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Rejected origin: ${origin}`);
+      callback(new Error(`Not allowed by CORS: ${origin}`), false);
+    }
+  },
+  credentials: true,
+};
+app.use(cors(corsOptions));
 
 // Rate limiting (60 requests per minute per IP)
 const limiter = rateLimit({

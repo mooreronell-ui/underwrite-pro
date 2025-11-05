@@ -5,21 +5,27 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SB_URL = process.env.SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn('[SUPABASE] Not fully configured - some features may not work');
+// Strict validation of required envs
+const isUrlPresent = !!SB_URL;
+const isKeyPresent = !!SB_KEY;
+
+console.log('[SUPABASE] Environment Check:', {
+  'URL Present': isUrlPresent,
+  'Service Key Present': isKeyPresent,
+  'URL Value': SB_URL ? `${SB_URL.substring(0, 30)}...` : 'MISSING',
+  'Key Value': SB_KEY ? `${SB_KEY.substring(0, 20)}...` : 'MISSING'
+});
+
+if (!isUrlPresent || !isKeyPresent) {
+  console.error('[SUPABASE] FATAL: Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+  throw new Error('Supabase client initialization failed - missing required environment variables');
 }
 
-const supabase = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-  : null;
+const supabase = createClient(SB_URL, SB_KEY);
 
-if (supabase) {
-  console.log('[SUPABASE] Client initialized successfully');
-} else {
-  console.warn('[SUPABASE] Client not initialized - missing environment variables');
-}
+console.log('[SUPABASE] Client initialized successfully');
 
 module.exports = { supabase };
