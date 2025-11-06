@@ -54,6 +54,7 @@ const underwritingRoutes = require('./routes/underwriting');
 const termSheetsRoutes = require('./routes/termSheets');
 const orgsRoutes = require('./routes/orgs');
 const webhooksRoutes = require('./routes/webhooks');
+const migrateRoutes = require('./routes/migrate');
 
 // Initialize Express app
 const app = express();
@@ -131,6 +132,9 @@ app.get('/health', (req, res) => {
 // Public deals endpoint for testing (must be before auth middleware)
 const publicDealsController = require('./controllers/publicDealsController');
 app.get('/api/deals/public', publicDealsController.listPublicDeals);
+
+// Migration endpoints (no auth required for initial setup)
+app.use('/api/migrate', migrateRoutes);
 
 // ============================================================
 // API ROUTES (with authentication & org context)
