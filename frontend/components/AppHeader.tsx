@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import OrgSwitcher from './OrgSwitcher';
 
 export default function AppHeader() {
-  const { isAuthenticated, signOut } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   return (
     <header className="flex justify-between items-center p-4 border-b">
@@ -13,7 +13,7 @@ export default function AppHeader() {
         {isAuthenticated && <OrgSwitcher />}
         <Link href="/demo" className="text-sm text-gray-600">Demo</Link>
         {isAuthenticated ? (
-          <button onClick={signOut} className="text-sm text-red-600">Sign Out</button>
+          <button onClick={logout} className="text-sm text-red-600">Sign Out</button>
         ) : (
           <Link href="/login" className="text-sm text-green-600">Login</Link>
         )}
