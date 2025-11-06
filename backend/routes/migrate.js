@@ -7,6 +7,30 @@ const { Pool } = require('pg');
  * Execute the organization tables migration using direct PostgreSQL connection
  * This endpoint is NOT protected by auth middleware (mounted before auth in index.js)
  */
+/**
+ * GET /migrate/check
+ * Check if DATABASE_URL is configured (for debugging)
+ */
+router.get('/check', (req, res) => {
+  const databaseUrl = process.env.DATABASE_URL;
+  
+  if (!databaseUrl) {
+    return res.json({
+      configured: false,
+      message: 'DATABASE_URL is not set'
+    });
+  }
+  
+  // Mask the password in the URL for security
+  const masked = databaseUrl.replace(/:\/\/([^:]+):([^@]+)@/, '://$1:****@');
+  
+  res.json({
+    configured: true,
+    masked_url: masked,
+    length: databaseUrl.length
+  });
+});
+
 router.post('/run', async (req, res) => {
   console.log('[MIGRATION] Starting organization tables migration...');
   
