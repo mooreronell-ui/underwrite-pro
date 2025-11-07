@@ -2,6 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
+
+// Supabase auth token key for this project
+const SUPABASE_AUTH_KEY = 'sb-engzooyyfnucsbzptfck-auth-token';
 
 interface User {
   id: string;
@@ -78,13 +82,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
+  const logout = async () => {
+    // 1. Call Supabase API logout (non-blocking)
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.warn('Supabase signOut error (non-blocking):', error);
+    }
+
+    // 2. CRITICAL: Force clear all local storage tokens (Prevents stale state)
     if (typeof window !== 'undefined') {
+      // Clear application tokens
       localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
+      localStorage.removeItem('up_token');
+      localStorage.removeItem('up_user');
+      
+      // Clear Supabase session tokens
+      const supabaseKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('sb-') || key.includes('supabase')
+      );
+      supabaseKeys.forEach(key => localStorage.removeItem(key));
     }
+
+    // 3. Clear React state
+    setToken(null);
+    setUser(null);
+
+    // 4. Redirect to force a clean session load
     router.push('/login');
   };
 
