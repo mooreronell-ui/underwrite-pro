@@ -44,9 +44,12 @@ router.post('/', async (req, res) => {
   if (!name || name.length < 3) return res.status(400).json({ ok: false, error: 'Organization name is required.' });
 
   try {
+    // Generate slug from name (lowercase, replace spaces with hyphens, remove special chars)
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    
     const { data: orgRow, error: orgErr } = await supabase
       .from('organizations')
-      .insert({ name })
+      .insert({ name, slug })
       .select('id')
       .single();
     if (orgErr) throw orgErr;
