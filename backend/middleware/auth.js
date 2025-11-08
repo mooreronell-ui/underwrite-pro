@@ -63,13 +63,10 @@ const authMiddleware = async (req, res, next) => {
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
-    // Verify JWT token
-    let decoded;
-    try {
-      // Use Supabase JWT secret or fallback to custom JWT_SECRET
-      const jwtSecret = process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET;
-      decoded = jwt.verify(token, jwtSecret);
-    } catch (jwtError) {
+    // Verify JWT token with Supabase
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !authUser) {
       return res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid or expired token',
@@ -77,56 +74,65 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    // Extract user information from token
-    const userId = decoded.sub || decoded.user_id;
-    
-    if (!userId) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'Token missing user identifier',
-        code: 'AUTH_INVALID_TOKEN_PAYLOAD'
-      });
-    }
+    const userId = authUser.id;
 
-    // Fetch user details from database (including org_id and role)
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('id, org_id, email, first_name, last_name, role, status')
-      .eq('id', userId)
+    // Fetch user's active organization and role
+    const { data: activeOrg, error: activeOrgError } = await supabase
+      .from('user_active_org')
+      .select('org_id')
+      .eq('auth_user_id', userId)
       .single();
 
-    if (error || !user) {
-      return res.status(401).json({
-        error: 'Unauthorized',
-        message: 'User not found or inactive',
-        code: 'AUTH_USER_NOT_FOUND'
-      });
+    if (activeOrgError || !activeOrg) {
+      // User has no active organization - allow but with null org_id
+      console.warn(`[AUTH] User ${userId} has no active organization`);
+      req.user = {
+        id: userId,
+        org_id: null,
+        email: authUser.email,
+        first_name: authUser.user_metadata?.first_name || '',
+        last_name: authUser.user_metadata?.last_name || '',
+        role: 'member'
+      };
+      req.jwtClaims = {
+        sub: userId,
+        org_id: null,
+        role: 'member'
+      };
+      return next();
     }
 
-    // Check if user is active
-    if (user.status !== 'active') {
-      return res.status(403).json({
-        error: 'Forbidden',
-        message: 'User account is not active',
-        code: 'AUTH_USER_INACTIVE'
+    // Fetch user's role in the active organization
+    const { data: membership, error: membershipError } = await supabase
+      .from('user_org_memberships')
+      .select('role')
+      .eq('auth_user_id', userId)
+      .eq('org_id', activeOrg.org_id)
+      .single();
+
+    if (membershipError || !membership) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'User membership not found',
+        code: 'AUTH_USER_NOT_FOUND'
       });
     }
 
     // Attach user context to request object
     req.user = {
-      id: user.id,
-      org_id: user.org_id,
-      email: user.email,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      role: user.role
+      id: userId,
+      org_id: activeOrg.org_id,
+      email: authUser.email,
+      first_name: authUser.user_metadata?.first_name || '',
+      last_name: authUser.user_metadata?.last_name || '',
+      role: membership.role
     };
 
     // Set JWT claims for RLS (used by database policies)
     req.jwtClaims = {
-      sub: user.id,
-      org_id: user.org_id,
-      role: user.role
+      sub: userId,
+      org_id: activeOrg.org_id,
+      role: membership.role
     };
 
     next();
