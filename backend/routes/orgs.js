@@ -65,8 +65,15 @@ router.post('/', async (req, res) => {
     audit?.('org.create', { org_id, user_id: auth_user_id, name });
     return res.status(201).json({ ok: true, id: org_id, name, message: 'Organization created and set as active.' });
   } catch (e) {
-    console.error('orgs.create error:', e);
-    return res.status(500).json({ ok: false, error: 'Failed to create organization.' });
+    // CRITICAL: Log the exact database error message for diagnosis
+    console.error('FATAL ORG CREATE ERROR:', JSON.stringify({
+      message: e.message,
+      code: e.code,
+      details: e.details,
+      hint: e.hint,
+      full: e
+    }, null, 2));
+    return res.status(500).json({ ok: false, error: e.message || 'Failed to create organization due to server error.' });
   }
 });
 
