@@ -61,9 +61,10 @@ router.post('/', async (req, res) => {
       .insert({ org_id, auth_user_id, role: 'owner' });
     if (memErr) throw memErr;
 
-    await supabase
+    const { error: activeErr } = await supabase
       .from('user_active_org')
       .upsert({ auth_user_id, org_id }, { onConflict: 'auth_user_id' });
+    if (activeErr) throw activeErr;
 
     // CRITICAL FIX: Ensure audit logging is non-blocking.
     // If audit fails, we should still return 201 success.
