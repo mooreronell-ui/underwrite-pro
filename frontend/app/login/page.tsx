@@ -33,8 +33,8 @@ export default function LoginPage() {
       // Store access token for API calls
       const accessToken = data.session?.access_token;
       if (accessToken && typeof window !== 'undefined') {
-        localStorage.setItem('up_token', accessToken);
-        localStorage.setItem('up_user', JSON.stringify(data.user));
+        localStorage.setItem('auth_token', accessToken);
+        localStorage.setItem('auth_user', JSON.stringify(data.user));
       }
 
       console.log('✓ Login successful:', data.user?.email);
