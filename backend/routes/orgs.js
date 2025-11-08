@@ -68,9 +68,13 @@ router.post('/', async (req, res) => {
 
     // CRITICAL FIX: Ensure audit logging is non-blocking.
     // If audit fails, we should still return 201 success.
+    const auditPayload = { org_id, user_id: auth_user_id, name };
+    
     (async () => {
       try {
-        await audit?.('org.create', { org_id, user_id: auth_user_id, name });
+        // FIX: Stringify the payload to avoid database UUID type errors
+        const detailString = JSON.stringify(auditPayload);
+        await audit?.('org.create', detailString);
       } catch (e) {
         console.error('Non-blocking Audit Log Failed:', e.message);
       }
@@ -114,7 +118,8 @@ router.post('/:id/activate', async (req, res) => {
       .upsert({ auth_user_id, org_id }, { onConflict: 'auth_user_id' });
     if (error) throw error;
 
-    audit?.('org.activate', { org_id, user_id: auth_user_id });
+    // FIX: Stringify audit payload to avoid UUID type errors
+    audit?.('org.activate', JSON.stringify({ org_id, user_id: auth_user_id }));
     return res.json({ ok: true, org_id, message: 'Active organization set.' });
   } catch (e) {
     console.error('orgs.activate error:', e);
