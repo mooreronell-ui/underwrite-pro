@@ -64,9 +64,11 @@ const authMiddleware = async (req, res, next) => {
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     // Verify JWT token with Supabase
+    console.log('[AUTH] Verifying token for user...');
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !authUser) {
+      console.error('[AUTH] Token verification failed:', authError?.message || 'No user found');
       return res.status(401).json({
         error: 'Unauthorized',
         message: 'Invalid or expired token',
@@ -75,6 +77,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     const userId = authUser.id;
+    console.log('[AUTH] Token verified for user:', userId);
 
     // Fetch user's active organization and role
     const { data: activeOrg, error: activeOrgError } = await supabase
@@ -85,7 +88,7 @@ const authMiddleware = async (req, res, next) => {
 
     if (activeOrgError || !activeOrg) {
       // User has no active organization - allow but with null org_id
-      console.warn(`[AUTH] User ${userId} has no active organization`);
+      console.warn(`[AUTH] User ${userId} has no active organization`, activeOrgError?.message);
       req.user = {
         id: userId,
         org_id: null,
@@ -111,6 +114,7 @@ const authMiddleware = async (req, res, next) => {
       .single();
 
     if (membershipError || !membership) {
+      console.error('[AUTH] Membership query failed:', membershipError?.message || 'No membership found', { userId, orgId: activeOrg.org_id });
       return res.status(401).json({
         error: 'Unauthorized',
         message: 'User membership not found',
@@ -119,6 +123,7 @@ const authMiddleware = async (req, res, next) => {
     }
 
     // Attach user context to request object
+    console.log('[AUTH] Authentication successful:', { userId, orgId: activeOrg.org_id, role: membership.role });
     req.user = {
       id: userId,
       org_id: activeOrg.org_id,
