@@ -28,7 +28,22 @@ function getSupabase() {
  * Expects Authorization header: Bearer <token>
  */
 const authMiddleware = async (req, res, next) => {
+  // Add timeout to prevent hanging
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    console.error('[AUTH] Request timeout after 5 seconds');
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'Authentication timeout',
+        code: 'AUTH_TIMEOUT'
+      });
+    }
+  }, 5000);
+
   try {
+    if (timedOut) return;
     const supabase = getSupabase();
     
     // If Supabase is not configured, allow request through
@@ -51,6 +66,7 @@ const authMiddleware = async (req, res, next) => {
     }
     
     // Extract token from Authorization header
+    if (timedOut) return;
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -140,9 +156,12 @@ const authMiddleware = async (req, res, next) => {
       role: membership.role
     };
 
+    clearTimeout(timeoutId);
     next();
   } catch (error) {
+    clearTimeout(timeoutId);
     console.error('[AUTH] Authentication error:', error);
+    if (res.headersSent) return;
     return res.status(500).json({
       error: 'Internal Server Error',
       message: 'Authentication failed',
