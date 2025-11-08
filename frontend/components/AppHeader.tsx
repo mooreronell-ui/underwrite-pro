@@ -7,7 +7,7 @@ export default function AppHeader() {
   const { isAuthenticated, user, logout } = useAuth();
 
   return (
-    <header className="flex justify-between items-center p-4 border-b bg-white shadow-sm">
+    <header className="flex justify-between items-center px-6 py-3 border-b border-gray-100 bg-white shadow-sm/50">
       <Link href="/" className="text-xl font-bold text-blue-700">
         Underwrite Pro
       </Link>
@@ -16,10 +16,10 @@ export default function AppHeader() {
         {isAuthenticated ? (
           <>
             <OrgSwitcher />
-            <Link href="/dashboard" className="text-sm text-gray-700 hover:text-blue-600">
+            <Link href="/dashboard" className="text-sm text-gray-500 hover:text-blue-600 transition">
               Dashboard
             </Link>
-            <Link href="/deals" className="text-sm text-gray-700 hover:text-blue-600">
+            <Link href="/deals" className="text-sm text-gray-500 hover:text-blue-600 transition">
               Deals
             </Link>
             <div className="flex items-center space-x-3 border-l pl-4">
@@ -34,10 +34,10 @@ export default function AppHeader() {
           </>
         ) : (
           <>
-            <Link href="/demo" className="text-sm text-gray-600 hover:text-blue-600">
+            <Link href="/demo" className="text-sm text-gray-500 hover:text-blue-600 transition">
               Demo
             </Link>
-            <Link href="/login" className="text-sm text-green-600 hover:text-green-700 font-medium">
+            <Link href="/login" className="text-sm text-blue-600 hover:text-blue-700 font-medium transition">
               Login
             </Link>
           </>

@@ -52,12 +52,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50/80">
       <div className="max-w-md w-full">
-        <div className="card">
+        <div className="bg-white p-10 rounded-xl shadow-lg border border-gray-100">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Underwrite Pro</h1>
-            <p className="text-sm text-gray-600 mt-2">Sign in to your account</p>
+            <h1 className="text-4xl font-extrabold text-gray-800 mb-2 font-sans">Underwrite Pro</h1>
+            <p className="text-sm text-gray-500 mt-2 tracking-tight">Sign in to continue</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -96,7 +96,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full"
+              className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-150 font-medium tracking-wide shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
