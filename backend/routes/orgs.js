@@ -65,7 +65,16 @@ router.post('/', async (req, res) => {
       .from('user_active_org')
       .upsert({ auth_user_id, org_id }, { onConflict: 'auth_user_id' });
 
-    audit?.('org.create', { org_id, user_id: auth_user_id, name });
+    // CRITICAL FIX: Ensure audit logging is non-blocking.
+    // If audit fails, we should still return 201 success.
+    (async () => {
+      try {
+        await audit?.('org.create', { org_id, user_id: auth_user_id, name });
+      } catch (e) {
+        console.error('Non-blocking Audit Log Failed:', e.message);
+      }
+    })();
+    
     return res.status(201).json({ ok: true, id: org_id, name, message: 'Organization created and set as active.' });
   } catch (e) {
     // CRITICAL: Log the exact database error message for diagnosis
