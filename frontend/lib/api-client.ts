@@ -22,7 +22,7 @@ apiClient.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
       // Get Supabase access token
-      const token = localStorage.getItem('up_token');
+      const token = localStorage.getItem('auth_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -40,8 +40,8 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       // Unauthorized - clear Supabase session and redirect to login
-      localStorage.removeItem('up_token');
-      localStorage.removeItem('up_user');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
       window.location.href = '/login';
     }
     return Promise.reject(error);
