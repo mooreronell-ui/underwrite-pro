@@ -11,29 +11,41 @@ router.get('/mine', async (req, res) => {
   const auth_user_id = req.user?.id;
   if (!auth_user_id) return res.status(401).json({ ok: false, error: 'Unauthorized' });
 
-  const { data, error} = await supabase
-    .from('user_org_memberships')
-    .select(`
-      role,
-      organizations ( id, name ),
-      user_active_org!left ( org_id )
-    `)
-    .eq('auth_user_id', auth_user_id);
+  try {
+    // Fetch user's organization memberships
+    const { data: memberships, error: memError } = await supabase
+      .from('user_org_memberships')
+      .select(`
+        role,
+        org_id,
+        organizations ( id, name )
+      `)
+      .eq('auth_user_id', auth_user_id);
 
-  if (error) {
+    if (memError) throw memError;
+
+    // Fetch active organization separately
+    const { data: activeOrg, error: activeError } = await supabase
+      .from('user_active_org')
+      .select('org_id')
+      .eq('auth_user_id', auth_user_id)
+      .maybeSingle();
+
+    if (activeError) throw activeError;
+
+    const activeOrgId = activeOrg?.org_id;
+    const orgs = (memberships || []).map(m => ({
+      id: m.organizations.id,
+      name: m.organizations.name,
+      role: m.role,
+      is_active: m.organizations.id === activeOrgId,
+    }));
+
+    return res.json({ ok: true, orgs });
+  } catch (error) {
     console.error('orgs.mine error:', error);
     return res.status(500).json({ ok: false, error: 'Failed to retrieve organizations.' });
   }
-
-  const activeOrgId = data?.find(o => Array.isArray(o.user_active_org) && o.user_active_org.length > 0)?.user_active_org?.[0]?.org_id;
-  const orgs = (data || []).map(o => ({
-    id: o.organizations.id,
-    name: o.organizations.name,
-    role: o.role,
-    is_active: o.organizations.id === activeOrgId,
-  }));
-
-  return res.json({ ok: true, orgs });
 });
 
 // POST /api/orgs
