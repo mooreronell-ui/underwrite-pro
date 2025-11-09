@@ -1,11 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-
-// Supabase auth token key for this project
-const SUPABASE_AUTH_KEY = 'sb-engzooyyfnucsbzptfck-auth-token';
+import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
 
 interface User {
   id: string;
@@ -23,94 +21,267 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Token refresh interval: 50 minutes (tokens expire at 60 minutes)
+const TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshTimer, setRefreshTimer] = useState<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    // Check for stored token on mount
-    if (typeof window !== 'undefined') {
-      const storedToken = localStorage.getItem('auth_token');
-      const storedUser = localStorage.getItem('auth_user');
+  // Function to extract user data from Supabase session
+  const extractUserFromSession = useCallback(async (session: Session): Promise<User | null> => {
+    try {
+      const supabaseUser = session.user;
+      
+      // Get user's active organization from backend
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orgs/mine`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+      if (!response.ok) {
+        console.error('Failed to fetch user organizations');
+        return null;
       }
+
+      const data = await response.json();
+      const activeOrg = data.organizations?.find((org: any) => org.is_active) || data.organizations?.[0];
+
+      if (!activeOrg) {
+        console.error('No organization found for user');
+        return null;
+      }
+
+      return {
+        id: supabaseUser.id,
+        org_id: activeOrg.id,
+        email: supabaseUser.email || '',
+        first_name: supabaseUser.user_metadata?.first_name || '',
+        last_name: supabaseUser.user_metadata?.last_name || '',
+        role: supabaseUser.user_metadata?.role || 'user'
+      };
+    } catch (error) {
+      console.error('Error extracting user from session:', error);
+      return null;
     }
-    setLoading(false);
   }, []);
+
+  // Function to refresh the session
+  const refreshSession = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error('Session refresh failed:', error);
+        // If refresh fails, log out the user
+        await logout();
+        return;
+      }
+
+      if (data.session) {
+        setToken(data.session.access_token);
+        const userData = await extractUserFromSession(data.session);
+        if (userData) {
+          setUser(userData);
+          // Persist to localStorage
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('auth_token', data.session.access_token);
+            localStorage.setItem('auth_user', JSON.stringify(userData));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+    }
+  }, [extractUserFromSession]);
+
+  // Set up automatic token refresh
+  useEffect(() => {
+    if (token && !refreshTimer) {
+      const timer = setInterval(() => {
+        console.log('Auto-refreshing session token...');
+        refreshSession();
+      }, TOKEN_REFRESH_INTERVAL);
+      
+      setRefreshTimer(timer);
+      
+      return () => {
+        if (timer) clearInterval(timer);
+      };
+    }
+  }, [token, refreshTimer, refreshSession]);
+
+  // Initialize auth state on mount
+  useEffect(() => {
+    const initializeAuth = async () => {
+      try {
+        // Check for existing Supabase session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
+        }
+
+        if (session) {
+          setToken(session.access_token);
+          const userData = await extractUserFromSession(session);
+          if (userData) {
+            setUser(userData);
+            // Persist to localStorage
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('auth_token', session.access_token);
+              localStorage.setItem('auth_user', JSON.stringify(userData));
+            }
+          }
+        } else {
+          // Try to restore from localStorage as fallback
+          if (typeof window !== 'undefined') {
+            const storedToken = localStorage.getItem('auth_token');
+            const storedUser = localStorage.getItem('auth_user');
+
+            if (storedToken && storedUser) {
+              // Verify token is still valid by attempting refresh
+              await refreshSession();
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event);
+      
+      if (event === 'SIGNED_IN' && session) {
+        setToken(session.access_token);
+        const userData = await extractUserFromSession(session);
+        if (userData) {
+          setUser(userData);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('auth_token', session.access_token);
+            localStorage.setItem('auth_user', JSON.stringify(userData));
+          }
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setToken(null);
+        setUser(null);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+        }
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        setToken(session.access_token);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', session.access_token);
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      if (refreshTimer) clearInterval(refreshTimer);
+    };
+  }, [extractUserFromSession, refreshSession]);
 
   const login = async (email: string, password: string) => {
     try {
-      // TODO: Replace with actual login API call
-      // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password })
-      // });
-      // const data = await response.json();
+      setLoading(true);
+      
+      // Use Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      // Placeholder: Mock login for demo
-      const mockToken = 'mock_jwt_token_' + Date.now();
-      const mockUser: User = {
-        id: '22222222-2222-2222-2222-222222222222',
-        org_id: '11111111-1111-1111-1111-111111111111',
-        email: email,
-        first_name: 'Sarah',
-        last_name: 'Johnson',
-        role: 'admin'
-      };
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      setToken(mockToken);
-      setUser(mockUser);
+      if (!data.session) {
+        throw new Error('No session returned from login');
+      }
+
+      // Extract user data
+      setToken(data.session.access_token);
+      const userData = await extractUserFromSession(data.session);
+      
+      if (!userData) {
+        throw new Error('Failed to load user data');
+      }
+
+      setUser(userData);
+
+      // Persist to localStorage
       if (typeof window !== 'undefined') {
-        localStorage.setItem('auth_token', mockToken);
-        localStorage.setItem('auth_user', JSON.stringify(mockUser));
+        localStorage.setItem('auth_token', data.session.access_token);
+        localStorage.setItem('auth_user', JSON.stringify(userData));
       }
 
       router.push('/dashboard');
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
-    // 1. Call Supabase API logout (non-blocking)
     try {
+      // Clear refresh timer
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+        setRefreshTimer(null);
+      }
+
+      // Sign out from Supabase
       await supabase.auth.signOut();
+
+      // Clear local state
+      setToken(null);
+      setUser(null);
+
+      // Clear localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('up_token');
+        localStorage.removeItem('up_user');
+        
+        // Clear all Supabase session tokens
+        const supabaseKeys = Object.keys(localStorage).filter(key => 
+          key.startsWith('sb-') || key.includes('supabase')
+        );
+        supabaseKeys.forEach(key => localStorage.removeItem(key));
+      }
+
+      // Redirect to login
+      router.push('/login');
     } catch (error) {
-      console.warn('Supabase signOut error (non-blocking):', error);
+      console.error('Logout error:', error);
+      // Force logout even if API call fails
+      setToken(null);
+      setUser(null);
+      router.push('/login');
     }
-
-    // 2. CRITICAL: Force clear all local storage tokens (Prevents stale state)
-    if (typeof window !== 'undefined') {
-      // Clear application tokens
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
-      localStorage.removeItem('up_token');
-      localStorage.removeItem('up_user');
-      
-      // Clear Supabase session tokens
-      const supabaseKeys = Object.keys(localStorage).filter(key => 
-        key.startsWith('sb-') || key.includes('supabase')
-      );
-      supabaseKeys.forEach(key => localStorage.removeItem(key));
-    }
-
-    // 3. Clear React state
-    setToken(null);
-    setUser(null);
-
-    // 4. Redirect to force a clean session load
-    router.push('/login');
   };
 
   return (
@@ -121,7 +292,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         logout,
-        isAuthenticated: !!token && !!user
+        isAuthenticated: !!token && !!user,
+        refreshSession
       }}
     >
       {children}
