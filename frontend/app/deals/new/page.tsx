@@ -13,7 +13,6 @@ export default function NewDealPage() {
   const [error, setError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
-    borrower_id: '66666666-6666-6666-6666-666666666666', // Demo borrower from seed data
     deal_name: '',
     loan_amount: '',
     asset_type: 'multifamily',
