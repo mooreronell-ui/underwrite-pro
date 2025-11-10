@@ -56,6 +56,10 @@ services:
         sync: false
       - key: NEXT_PUBLIC_GHL_WEBHOOK_URL
         sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        value: https://engzooyyfnucsbzptfck.supabase.co
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVuZ3pvb3l5Zm51Y3NienB0ZmNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA5MzYwMzcsImV4cCI6MjA0NjUxMjAzN30.Uw3FvKSLdNTZvxuAWdBEqJZoH3dMmJSHXPDqTiOXxJY
 
 databases:
   - name: underwrite-pro-db
