@@ -55,6 +55,7 @@ const termSheetsRoutes = require('./routes/termSheets');
 const orgsRoutes = require('./routes/orgs');
 const webhooksRoutes = require('./routes/webhooks');
 const migrateRoutes = require('./routes/migrate');
+const rbacRoutes = require('./routes/rbac');
 
 // Initialize Express app
 const app = express();
@@ -160,6 +161,7 @@ app.use(orgContext);
 app.use('/api/deals', dealsRoutes);
 app.use('/api/underwriting', underwritingRoutes);
 app.use('/api/term-sheets', termSheetsRoutes);
+app.use('/api/rbac', rbacRoutes);
 
 // Webhooks (no auth required, signature validation inside handlers)
 app.use('/webhooks', webhooksRoutes);
