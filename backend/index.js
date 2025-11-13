@@ -58,6 +58,10 @@ const migrateRoutes = require('./routes/migrate');
 
 // Initialize Express app
 const app = express();
+
+// FIX P2: Trust proxy for Render deployment (required for rate limiting/IP logging)
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 3000;
 
 // ============================================================
@@ -143,6 +147,9 @@ app.use('/api/migrate', migrateRoutes);
 // Org routes (includes auth middleware internally)
 app.use('/api/orgs', orgsRoutes);
 
+// --- AI / Predictive Intelligence Routes ---
+app.use('/api/ai', require('./routes/ai'));
+
 // Protected routes (apply auth + org context)
 const supabaseAuth = require('./middleware/supabaseAuth');
 const orgContext = require('./middleware/orgContext');
@@ -177,7 +184,7 @@ app.use(errorHandler);
 // START SERVER
 // ============================================================
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => { // FIX P1: Assign server instance for graceful shutdown
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
