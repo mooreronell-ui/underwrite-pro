@@ -12,6 +12,7 @@
 const express = require('express');
 const router = express.Router();
 const supabaseAuth = require('../middleware/supabaseAuth');
+const mlController = require('../controllers/mlController');
 
 // Apply authentication middleware to all AI routes
 router.use(supabaseAuth);
@@ -29,35 +30,7 @@ router.use(supabaseAuth);
  * - Sensitivity analysis for key metrics
  * - Anomaly detection flags
  */
-router.get('/risk-score/:dealId', async (req, res) => {
-  try {
-    const { dealId } = req.params;
-    
-    // TODO: Implement ML model integration
-    // - Load deal data from database
-    // - Run trained model for risk prediction
-    // - Calculate sensitivity metrics
-    // - Detect anomalies in financial data
-    
-    // Placeholder response
-    res.json({
-      dealId,
-      score: 78.5,
-      risk_level: 'moderate',
-      sensitivity: {
-        dscr: 'high',
-        ltv: 'medium',
-        occupancy: 'low'
-      },
-      anomalies: [],
-      confidence: 0.87,
-      generated_at: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('[AI] Risk score error:', error);
-    res.status(500).json({ error: 'Failed to calculate risk score' });
-  }
-});
+router.get('/risk-score/:dealId', mlController.getRiskScore);
 
 /**
  * POST /api/ai/stress-test/:dealId
@@ -68,44 +41,7 @@ router.get('/risk-score/:dealId', async (req, res) => {
  * - Occupancy fluctuations
  * - Market value adjustments
  */
-router.post('/stress-test/:dealId', async (req, res) => {
-  try {
-    const { dealId } = req.params;
-    const { scenarios } = req.body || {};
-    
-    // TODO: Implement stress testing engine
-    // - Load current deal metrics
-    // - Apply scenario parameters
-    // - Recalculate DSCR, LTV, NOI
-    // - Determine pass/fail thresholds
-    
-    // Placeholder response
-    res.json({
-      dealId,
-      baseline: {
-        dscr: 1.35,
-        ltv: 65,
-        noi: 450000
-      },
-      scenarios: {
-        rate_hike: {
-          new_dscr: 1.15,
-          status: 'pass',
-          threshold: 1.10
-        },
-        vacancy_increase: {
-          new_dscr: 1.22,
-          status: 'pass',
-          threshold: 1.10
-        }
-      },
-      generated_at: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('[AI] Stress test error:', error);
-    res.status(500).json({ error: 'Failed to run stress test' });
-  }
-});
+router.post('/stress-test/:dealId', mlController.runStressTest);
 
 // ============================================================
 // 2. HUMAN-CENTRIC COMMUNICATION & SUMMARIZATION (NLP/LLM)
