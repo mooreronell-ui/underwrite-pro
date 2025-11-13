@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      const activeOrg = data.organizations?.find((org: any) => org.is_active) || data.organizations?.[0];
+      const activeOrg = data.orgs?.find((org: any) => org.is_active) || data.orgs?.[0];
 
       if (!activeOrg) {
         console.error('No organization found for user');
