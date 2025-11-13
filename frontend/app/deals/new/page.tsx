@@ -16,10 +16,10 @@ export default function NewDealPage() {
     deal_name: '',
     loan_amount: '',
     asset_type: 'multifamily',
-    property_address_line1: '',
-    property_city: '',
-    property_state: '',
-    property_zip_code: '',
+    property_address: '',
+    city: '',
+    state: '',
+    postal_code: '',
     loan_purpose: 'purchase',
     loan_type: 'bridge',
     requested_ltv: '',
@@ -155,8 +155,8 @@ export default function NewDealPage() {
                 <label className="label">Address</label>
                 <input
                   type="text"
-                  name="property_address_line1"
-                  value={formData.property_address_line1}
+                  name="property_address"
+                  value={formData.property_address}
                   onChange={handleChange}
                   className="input"
                   placeholder="123 Main Street"
@@ -167,8 +167,8 @@ export default function NewDealPage() {
                 <label className="label">City</label>
                 <input
                   type="text"
-                  name="property_city"
-                  value={formData.property_city}
+                  name="city"
+                  value={formData.city}
                   onChange={handleChange}
                   className="input"
                   placeholder="Austin"
@@ -179,8 +179,8 @@ export default function NewDealPage() {
                 <label className="label">State</label>
                 <input
                   type="text"
-                  name="property_state"
-                  value={formData.property_state}
+                  name="state"
+                  value={formData.state}
                   onChange={handleChange}
                   className="input"
                   placeholder="TX"
@@ -191,8 +191,8 @@ export default function NewDealPage() {
                 <label className="label">Zip Code</label>
                 <input
                   type="text"
-                  name="property_zip_code"
-                  value={formData.property_zip_code}
+                  name="postal_code"
+                  value={formData.postal_code}
                   onChange={handleChange}
                   className="input"
                   placeholder="78701"
