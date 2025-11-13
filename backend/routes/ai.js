@@ -13,6 +13,13 @@ const express = require('express');
 const router = express.Router();
 const supabaseAuth = require('../middleware/supabaseAuth');
 const mlController = require('../controllers/mlController');
+const OpenAI = require('openai');
+const { supabase } = require('../lib/supabaseClient');
+
+// Initialize OpenAI client with environment variable
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 // Apply authentication middleware to all AI routes
 router.use(supabaseAuth);
@@ -60,29 +67,72 @@ router.get('/summary/:dealId', async (req, res) => {
   try {
     const { dealId } = req.params;
     
-    // TODO: Implement LLM integration
-    // - Fetch deal data and documents
-    // - Format context for LLM
-    // - Generate executive summary
-    // - Extract key points
-    
-    // Placeholder response
-    res.json({
-      dealId,
-      summary_text: "The deal represents a conservative multifamily acquisition in a strong market with established ownership structure. The property demonstrates consistent occupancy above 92% with recent capital improvements totaling $2M. DSCR of 1.35 provides adequate cushion, though sensitivity to rate increases should be monitored.",
-      key_points: [
-        "Conservative LTV at 65%",
-        "Strong historical occupancy",
-        "Recent capital improvements",
-        "Moderate interest rate sensitivity"
+    // 1. Fetch deal data from database
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .select('*')
+      .eq('id', dealId)
+      .single();
+
+    if (dealError || !deal) {
+      return res.status(404).json({ 
+        error: 'Deal not found', 
+        details: dealError?.message 
+      });
+    }
+
+    // 2. Create structured prompt for GPT-4
+    const prompt = `Generate a concise 1-2 paragraph Executive Summary for this commercial real estate loan. The summary must be suitable for a Credit Committee and focus on Key Strengths, Risks, and a Final Recommendation. Use the provided data points only.
+
+**Deal Data:**
+- Property Type: ${deal.property_type || 'N/A'}
+- Loan Amount: $${deal.loan_amount?.toLocaleString() || 'N/A'}
+- LTV (Loan-to-Value): ${deal.ltv || 'N/A'}%
+- DSCR (Debt Service Coverage Ratio): ${deal.dscr || 'N/A'}
+- Property Location: ${deal.property_address || 'N/A'}
+- Borrower Credit Score: ${deal.borrower_credit_score || 'N/A'}
+- Property Value: $${deal.property_value?.toLocaleString() || 'N/A'}
+- Occupancy Rate: ${deal.occupancy_rate || 'N/A'}%
+- Net Operating Income: $${deal.noi?.toLocaleString() || 'N/A'}
+- Interest Rate: ${deal.interest_rate || 'N/A'}%`;
+
+    // 3. Call OpenAI API
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      messages: [
+        { 
+          role: "system", 
+          content: "You are an expert commercial real estate underwriter. Your tone is professional and factual. Focus on providing clear, actionable insights for Credit Committee review." 
+        },
+        { role: "user", content: prompt }
       ],
-      tone: "professional",
-      word_count: 67,
-      generated_at: new Date().toISOString()
+      temperature: 0.5,
+      max_tokens: 400
     });
+
+    const summary = completion.choices[0].message.content.trim();
+
+    // 4. Return structured response
+    return res.json({
+      deal_id: dealId,
+      summary: summary,
+      generated_at: new Date().toISOString(),
+      model: "gpt-4.1-mini",
+      status: "success",
+      deal_info: {
+        property_type: deal.property_type,
+        loan_amount: deal.loan_amount,
+        ltv: deal.ltv,
+        dscr: deal.dscr
+      }
+    });
+
   } catch (error) {
     console.error('[AI] Summary generation error:', error);
-    res.status(500).json({ error: 'Failed to generate summary' });
+    return res.status(500).json({ 
+      error: 'Failed to generate summary via AI Service', 
+      details: error.message 
+    });
   }
 });
 
@@ -259,9 +309,16 @@ router.get('/health', (req, res) => {
     service: 'ai-intelligence',
     version: '1.0.0',
     features: {
-      risk_assessment: 'placeholder',
-      summarization: 'placeholder',
-      guidance: 'placeholder'
+      risk_assessment: 'operational',  // ML model trained and deployed
+      executive_summary: 'operational', // OpenAI GPT-4.1-mini integrated
+      document_qa: 'placeholder',       // RAG system pending
+      stress_testing: 'placeholder',    // Simulation logic pending
+      health_check: 'placeholder',      // Validation rules pending
+      pricing: 'placeholder'            // Market data integration pending
+    },
+    models: {
+      ml_risk: 'xgboost-v1',
+      llm_summary: 'gpt-4.1-mini'
     },
     timestamp: new Date().toISOString()
   });
