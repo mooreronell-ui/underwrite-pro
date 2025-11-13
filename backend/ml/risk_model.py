@@ -47,6 +47,16 @@ class RiskAssessmentModel:
         """
         self.model = None
         self.scaler = None
+        self.model_version = '1.0.0'
+        
+        # Try to load trained model by default
+        if model_path is None:
+            default_path = os.path.join(os.path.dirname(__file__), 'risk_model_trained.pkl')
+            if os.path.exists(default_path):
+                model_path = default_path
+        
+        if model_path and os.path.exists(model_path):
+            self.load_model(model_path)
         self.feature_names = [
             'ltv_ratio',           # Loan-to-Value %
             'dscr',                # Debt Service Coverage Ratio
@@ -132,20 +142,23 @@ class RiskAssessmentModel:
         # Occupancy rate (default if not provided)
         occupancy_rate = 90.0  # Default 90% occupied
         
-        # Build feature vector
+        # Build feature vector matching trained model
+        # Trained model expects: loan_amount, ltv, dscr, borrower_credit_score, occupancy_rate, property_age
+        
+        # Get values from deal_data with fallbacks
+        borrower_credit = deal_data.get('borrower_credit_score', borrower_credit_score)
+        occupancy = deal_data.get('occupancy_rate', occupancy_rate / 100)  # Convert to decimal if needed
+        if occupancy > 1:  # If provided as percentage
+            occupancy = occupancy / 100
+        property_age = deal_data.get('property_age', 15)  # Default 15 years
+        
         features = np.array([
-            ltv,
-            dscr,
             loan_amount,
-            property_value,
-            interest_rate,
-            term_months,
-            property_type_encoded,
-            location_score,
-            borrower_credit_score,
-            occupancy_rate,
-            noi,
-            cap_rate
+            ltv / 100 if ltv > 1 else ltv,  # Ensure decimal format
+            dscr,
+            borrower_credit,
+            occupancy,
+            property_age
         ]).reshape(1, -1)
         
         return features
@@ -292,13 +305,18 @@ class RiskAssessmentModel:
         """Identify key risk factors from features"""
         risk_factors = []
         
-        ltv, dscr, loan_amount, _, interest_rate, _, _, _, credit_score, occupancy, _, cap_rate = features
+        # Features: loan_amount, ltv, dscr, borrower_credit_score, occupancy_rate, property_age
+        loan_amount, ltv, dscr, credit_score, occupancy, property_age = features
+        
+        # Convert to percentages if needed
+        ltv_pct = ltv * 100 if ltv <= 1 else ltv
+        occupancy_pct = occupancy * 100 if occupancy <= 1 else occupancy
         
         # High LTV
-        if ltv > 80:
+        if ltv_pct > 80:
             risk_factors.append({
                 'factor': 'High Loan-to-Value Ratio',
-                'value': f'{ltv:.1f}%',
+                'value': f'{ltv_pct:.1f}%',
                 'impact': 'high'
             })
         
@@ -319,19 +337,19 @@ class RiskAssessmentModel:
             })
         
         # Low occupancy
-        if occupancy < 85:
+        if occupancy_pct < 85:
             risk_factors.append({
                 'factor': 'Low Occupancy Rate',
-                'value': f'{occupancy:.1f}%',
+                'value': f'{occupancy_pct:.1f}%',
                 'impact': 'medium'
             })
         
-        # Low cap rate
-        if cap_rate < 5:
+        # Old property
+        if property_age > 30:
             risk_factors.append({
-                'factor': 'Low Cap Rate',
-                'value': f'{cap_rate:.2f}%',
-                'impact': 'medium'
+                'factor': 'Older Property',
+                'value': f'{int(property_age)} years',
+                'impact': 'low'
             })
         
         return risk_factors[:5]  # Return top 5 factors
@@ -397,8 +415,10 @@ class RiskAssessmentModel:
         self.model = model_data['model']
         self.scaler = model_data['scaler']
         self.feature_names = model_data['feature_names']
+        self.model_version = model_data.get('version', '1.0.0')
         
         print(f"[INFO] Model loaded from {path}")
+        print(f"[INFO] Model version: {self.model_version}")
 
 
 # Global model instance
