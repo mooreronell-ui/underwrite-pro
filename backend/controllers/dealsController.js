@@ -60,7 +60,7 @@ exports.createDeal = async (req, res, next) => {
     if (borrower_id) {
       const borrowerCheck = await query(
         'SELECT id FROM borrowers WHERE id = $1 AND org_id = $2',
-        [borrower_id, req.user.org_id]
+        [borrower_id, req.orgId]
       );
 
       if (borrowerCheck.rows.length === 0) {
@@ -93,7 +93,7 @@ exports.createDeal = async (req, res, next) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *
     `, [
-      req.user.org_id,
+      req.orgId,
       borrower_id || null,
       deal_name,
       loan_amount,
@@ -151,7 +151,7 @@ exports.getDealById = async (req, res, next) => {
       LEFT JOIN users u_broker ON d.broker_id = u_broker.id
       LEFT JOIN users u_assigned ON d.assigned_to = u_assigned.id
       WHERE d.id = $1 AND d.org_id = $2
-    `, [id, req.user.org_id]);
+    `, [id, req.orgId]);
 
     if (result.rows.length === 0) {
       throw new AppError('Deal not found', 404, 'DEAL_NOT_FOUND');
@@ -242,7 +242,7 @@ exports.updateDeal = async (req, res, next) => {
     // Verify deal exists and belongs to user's org
     const dealCheck = await query(
       'SELECT id FROM deals WHERE id = $1 AND org_id = $2',
-      [id, req.user.org_id]
+      [id, req.orgId]
     );
 
     if (dealCheck.rows.length === 0) {
@@ -281,7 +281,7 @@ exports.updateDeal = async (req, res, next) => {
       SET ${updateFields.join(', ')}
       WHERE id = $${paramIndex} AND org_id = $${paramIndex + 1}
       RETURNING *
-    `, [...updateValues, id, req.user.org_id]);
+    `, [...updateValues, id, req.orgId]);
 
     res.json({
       success: true,
@@ -303,7 +303,7 @@ exports.deleteDeal = async (req, res, next) => {
 
     const result = await query(
       'DELETE FROM deals WHERE id = $1 AND org_id = $2 RETURNING id',
-      [id, req.user.org_id]
+      [id, req.orgId]
     );
 
     if (result.rows.length === 0) {

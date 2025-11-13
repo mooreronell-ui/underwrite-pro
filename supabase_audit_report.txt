@@ -1,0 +1,13 @@
+--- 1. LOCAL CODE & ENVIRONMENT CHECK ---
+Checking local repository files for hardcoded values...
+⚠️  Found Supabase URLs in code:
+./backend/run-migration.js:const supabaseUrl = 'https://hhyqydjbfbxcqazkwpvx.supabase.co';
+
+--- 2. LIVE RENDER ENVIRONMENT VARIABLE CHECK ---
+Verifying NEXT_PUBLIC_SUPABASE_ANON_KEY...
+❌ FAIL: ANON KEY DECODED REF mismatch. Expected engzooyyfnucsbzptfck, Found .
+Verifying SUPABASE_SERVICE_ROLE_KEY...
+❌ FAIL: SERVICE ROLE KEY DECODED REF mismatch. Expected engzooyyfnucsbzptfck, Found .
+
+--- 3. FINAL SUMMARY ---
+Review the output above. Any '❌ FAIL' indicates a security or functional mismatch.

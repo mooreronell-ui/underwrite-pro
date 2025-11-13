@@ -53,7 +53,7 @@ exports.createTermSheet = async (req, res, next) => {
     // Verify deal exists and belongs to user's org
     const dealResult = await query(
       'SELECT * FROM deals WHERE id = $1 AND org_id = $2',
-      [deal_id, req.user.org_id]
+      [deal_id, req.orgId]
     );
 
     if (dealResult.rows.length === 0) {
@@ -88,7 +88,7 @@ exports.createTermSheet = async (req, res, next) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `, [
-      req.user.org_id,
+      req.orgId,
       deal_id,
       version,
       loan_amount,
@@ -140,7 +140,7 @@ exports.getTermSheetById = async (req, res, next) => {
       LEFT JOIN borrowers b ON d.borrower_id = b.id
       LEFT JOIN users u ON ts.generated_by = u.id
       WHERE ts.id = $1 AND ts.org_id = $2
-    `, [id, req.user.org_id]);
+    `, [id, req.orgId]);
 
     if (result.rows.length === 0) {
       throw new AppError('Term sheet not found', 404, 'TERM_SHEET_NOT_FOUND');
@@ -166,7 +166,7 @@ exports.getTermSheetsByDealId = async (req, res, next) => {
     // Verify deal belongs to user's org
     const dealCheck = await query(
       'SELECT id FROM deals WHERE id = $1 AND org_id = $2',
-      [deal_id, req.user.org_id]
+      [deal_id, req.orgId]
     );
 
     if (dealCheck.rows.length === 0) {
@@ -181,7 +181,7 @@ exports.getTermSheetsByDealId = async (req, res, next) => {
       LEFT JOIN users u ON ts.generated_by = u.id
       WHERE ts.deal_id = $1 AND ts.org_id = $2
       ORDER BY ts.version DESC
-    `, [deal_id, req.user.org_id]);
+    `, [deal_id, req.orgId]);
 
     res.json({
       success: true,

@@ -15,7 +15,7 @@ exports.getOrgUsers = async (req, res, next) => {
     const { org_id } = req.params;
 
     // Verify user has access to this org
-    if (req.user.org_id !== org_id) {
+    if (req.orgId !== org_id) {
       throw new AppError('Access denied to this organization', 403, 'ORG_ACCESS_DENIED');
     }
 
