@@ -102,7 +102,7 @@ exports.createTermSheet = async (req, res, next) => {
       conditions || null,
       expiration_date || null,
       'draft',
-      req.user.id
+      req.userId
     ]);
 
     // Update deal status

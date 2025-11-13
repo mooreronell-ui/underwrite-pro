@@ -109,8 +109,8 @@ exports.createDeal = async (req, res, next) => {
       requested_term_months || null,
       'intake',
       'lead',
-      req.user.id, // broker_id
-      req.user.id, // created_by
+      req.userId, // broker_id
+      req.userId, // created_by
       notes || null
     ]);
 

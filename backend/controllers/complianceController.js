@@ -22,7 +22,7 @@ exports.performKYC = async (req, res) => {
   try {
     const { borrower_id, ssn, date_of_birth, address } = req.body;
     const orgId = req.orgId;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     // Validate required fields
     if (!borrower_id || !ssn || !date_of_birth) {
@@ -84,7 +84,7 @@ exports.performKYC = async (req, res) => {
       JSON.stringify({
         ...kycResult,
         borrower_email: borrower.email,
-        performed_by: req.user.email
+        performed_by: req.userEmail
       }),
       req.ip
     ]);
@@ -133,7 +133,7 @@ exports.performKYB = async (req, res) => {
   try {
     const { borrower_id, business_name, tax_id, business_address } = req.body;
     const orgId = req.orgId;
-    const userId = req.user.id;
+    const userId = req.userId;
 
     // Validate required fields
     if (!borrower_id || !business_name || !tax_id) {
@@ -200,7 +200,7 @@ exports.performKYB = async (req, res) => {
       JSON.stringify({
         ...kybResult,
         borrower_email: borrower.email,
-        performed_by: req.user.email
+        performed_by: req.userEmail
       }),
       req.ip
     ]);

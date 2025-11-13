@@ -89,7 +89,7 @@ exports.runUnderwriting = async (req, res, next) => {
     `, [
       req.orgId,
       deal_id,
-      req.user.id,
+      req.userId,
       metrics.dscr,
       metrics.ltv,
       metrics.ltc || null,
