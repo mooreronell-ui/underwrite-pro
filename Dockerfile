@@ -5,6 +5,10 @@
 
 FROM node:22-alpine
 
+# Install Python and ML dependencies
+RUN apk add --no-cache python3 py3-pip && \
+    python3 -m pip install --break-system-packages xgboost scikit-learn numpy pandas
+
 # Set working directory
 WORKDIR /app
 
