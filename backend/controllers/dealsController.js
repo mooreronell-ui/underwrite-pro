@@ -27,7 +27,7 @@ const createDealSchema = Joi.object({
   requested_rate: Joi.number().min(0).max(30).optional(),
   requested_term_months: Joi.number().integer().positive().optional(),
   notes: Joi.string().optional()
-});
+}).unknown(true);
 
 /**
  * POST /api/deals
@@ -65,8 +65,7 @@ exports.createDeal = [
       if (borrower_id) {
         const borrowerCheck = await query(
           'SELECT id FROM borrowers WHERE id = $1 AND org_id = $2',
-          [borrower_id, req.orgId],
-          req.userId
+          [borrower_id, req.orgId]
         );
 
         if (borrowerCheck.rows.length === 0) {
@@ -118,7 +117,7 @@ exports.createDeal = [
         req.userId, // broker_id
         req.userId, // created_by
         notes || null
-      ], req.userId);
+      ]);
 
       const deal = result.rows[0];
 
@@ -161,7 +160,7 @@ exports.getDealById = [
         LEFT JOIN users u_broker ON d.broker_id = u_broker.id
         LEFT JOIN users u_assigned ON d.assigned_to = u_assigned.id
         WHERE d.id = $1 AND d.org_id = $2
-      `, [id, req.orgId], req.userId);
+      `, [id, req.orgId]);
 
       if (result.rows.length === 0) {
         throw new AppError('Deal not found', 404, 'DEAL_NOT_FOUND');
@@ -260,8 +259,7 @@ exports.updateDeal = [
       // Verify deal exists and belongs to user's org
       const dealCheck = await query(
         'SELECT id FROM deals WHERE id = $1 AND org_id = $2',
-        [id, req.orgId],
-        req.userId
+        [id, req.orgId]
       );
 
       if (dealCheck.rows.length === 0) {
@@ -300,7 +298,7 @@ exports.updateDeal = [
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex} AND org_id = $${paramIndex + 1}
         RETURNING *
-      `, [...updateValues, id, req.orgId], req.userId);
+      `, [...updateValues, id, req.orgId]);
 
       res.json({
         success: true,
@@ -326,8 +324,7 @@ exports.deleteDeal = [
 
       const result = await query(
         'DELETE FROM deals WHERE id = $1 AND org_id = $2 RETURNING id',
-        [id, req.orgId],
-        req.userId
+        [id, req.orgId]
       );
 
       if (result.rows.length === 0) {
